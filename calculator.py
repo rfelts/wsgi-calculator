@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+
+# Russell Felts
+# Exercise 04 Book Server
+
+import traceback
+
 """
 For your homework this week, you'll be creating a wsgi application of
 your own.
@@ -37,48 +44,155 @@ To submit your homework:
     that explains how to perform calculations.
   * Commit and push your changes to your fork.
   * Submit a link to your Session03 fork repository!
-
-
 """
+
+def info(*args):
+    """
+    Produces a string that describes the site and how to use it
+    :param args: unused as nothing is being calculated
+    :return: String containing html describing the site
+    """
+    page = """
+        <h1>Calculator</h1>
+        <p>This site is a simple calculator that will add, substract, multiply, and divide two numbers.</p>
+        <p>Simply enter a url similar to http://localhost:8080/add/23/42 and the answer will be returned.</p>
+        <p> The possible paths are /add/#/#, /substract/#/#, /multiply/#/#, /divide/#/#</p>
+    """
+    return page
 
 
 def add(*args):
-    """ Returns a STRING with the sum of the arguments """
+    """
+    Adds to ints in a list
+    :param args: to numbers to add
+    :return: a STRING with the sum of the arguments
+    """
 
-    # TODO: Fill sum with the correct value, based on the
-    # args provided.
-    sum = "0"
+    # Convert the args to ints
+    temp_list = contert_to_int(*args)
+    total = sum(temp_list)
 
-    return sum
+    return str(total)
 
-# TODO: Add functions for handling more arithmetic operations.
+
+def subtract(*args):
+    """
+    Subtract two ints
+    :param args: to numbers to subtract
+    :return: a STRING with the sum of the arguments
+    """
+
+    # Convert the args to ints
+    temp_list = contert_to_int(*args)
+    total = temp_list[0] - temp_list[1]
+
+    return str(total)
+
+def multiply(*args):
+    """
+    Multiply two ints
+    :param args: to numbers to multiply
+    :return: a STRING with the sum of the arguments
+    """
+
+    # Convert the args to ints
+    temp_list = contert_to_int(*args)
+    total = temp_list[0] * temp_list[1]
+
+    return str(total)
+
+
+def divide(*args):
+    """
+    Divides two ints
+    :param args: to numbers to divide
+    :return: a STRING with the sum of the arguments
+    """
+    temp_list = contert_to_int(*args)
+
+    try:
+        total = temp_list[0] / temp_list[1]
+    except ZeroDivisionError:
+        raise ZeroDivisionError
+
+    return str(total)
+
+
+def contert_to_int(*args):
+    """
+    Converts the string args to a list of ints
+    :param args: Two strings
+    :return: A list of ints
+    """
+    return [int(arg) for arg in args]
+
 
 def resolve_path(path):
     """
-    Should return two values: a callable and an iterable of
-    arguments.
+    Take the request and determine the function to call
+    :param path: string representing the requested page
+    :return: func - the name of the requested function,
+            args - iterable of arguments required for the requested function
     """
+    funcs = {
+        '': info,
+        'add': add,
+        'subtract': subtract,
+        'multiply': multiply,
+        'divide': divide
+    }
 
-    # TODO: Provide correct values for func and args. The
-    # examples provide the correct *syntax*, but you should
-    # determine the actual values of func and args using the
-    # path.
-    func = add
-    args = ['25', '32']
+    # Split the path to determine what the function and arguments
+    path = path.strip('/').split('/')
+
+    func_name = path[0]
+    args = path[1:]
+
+    # Get the requested function from the dictionary or raise an error
+    try:
+        func = funcs[func_name]
+    except KeyError:
+        raise NameError
 
     return func, args
 
+
 def application(environ, start_response):
-    # TODO: Your application code from the book database
-    # work here as well! Remember that your application must
-    # invoke start_response(status, headers) and also return
-    # the body of the response in BYTE encoding.
-    #
-    # TODO (bonus): Add error handling for a user attempting
-    # to divide by zero.
-    pass
+    """
+    Handle incoming requests and route them to the appropriate function
+    :param environ: dictionary that contains all of the variables from the WSGI server's environment
+    :param start_response: the start response method
+    :return: the response body
+    """
+    headers = [('Content-type', 'text/html')]
+    try:
+        path = environ.get('PATH_INFO', None)
+
+        if path is None:
+            raise NameError
+
+        func, args = resolve_path(path)
+        body = func(*args)
+        status = "200 OK"
+
+    except NameError:
+        status = "404 Not Found"
+        body = "<h1>Not Found</h1>"
+    except ZeroDivisionError:
+        status = "400 Bad Request"
+        body = "<h1>Bad Request</h1>"
+    except Exception:
+        status = "500 Internal Server Error"
+        body = "<h1>Internal Server Error</h1>"
+        print(traceback.format_exc())
+    finally:
+        headers.append(('Content-length', str(len(body))))
+        start_response(status, headers)
+
+    return [body.encode('utf8')]
+
 
 if __name__ == '__main__':
-    # TODO: Insert the same boilerplate wsgiref simple
-    # server creation that you used in the book database.
-    pass
+    from wsgiref.simple_server import make_server
+    srv = make_server('localhost', 8080, application)
+    srv.serve_forever()
