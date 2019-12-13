@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # Russell Felts
-# Exercise 04 Book Server
+# Assignment 04 WSGI Calculator
 
 import traceback
 
